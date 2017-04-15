@@ -1,6 +1,7 @@
 package chat.client;
 
 import chat.common.Event;
+import chat.common.Sendable;
 import ocsf.client.AbstractClient;
 
 import java.io.IOException;
@@ -51,8 +52,12 @@ public class ChatClient extends AbstractClient {
 
     @Override
     protected void handleMessageFromServer(Object msg) {
-        if (msg instanceof Event) {
-            handleEventFromServer((Event) msg);
+        if (msg instanceof Sendable) {
+            if (msg instanceof Event) {
+                handleEventFromServer((Event) msg);
+            }
+        } else {
+            System.err.println("Received non-Sendable object: " + msg);
         }
     }
 

@@ -1,6 +1,8 @@
 package chat.server;
 
 import chat.common.Event;
+import chat.common.Message;
+import chat.common.Sendable;
 import ocsf.server.AbstractServer;
 import ocsf.server.ConnectionToClient;
 
@@ -45,8 +47,14 @@ public class ChatServer extends AbstractServer {
 
     @Override
     protected void handleMessageFromClient(Object msg, ConnectionToClient client) {
-        if (msg instanceof Event) {
-            handleEventFromClient((Event) msg, client);
+        if (msg instanceof Sendable) {
+            if (msg instanceof Event) {
+                handleEventFromClient((Event) msg, client);
+            } else if (msg instanceof Message) {
+
+            }
+        } else {
+            System.err.println("Received non-Sendable object: " + msg);
         }
     }
 
