@@ -14,6 +14,15 @@ public class Event extends Sendable {
     private int type;
     private Serializable[] data;
 
+    public Event(int type) {
+        this.type = type;
+    }
+
+    public Event(int type, Serializable[] data) {
+        this(type);
+        this.data = data;
+    }
+
     public Event(Serializable source, int type) {
         super(source);
 

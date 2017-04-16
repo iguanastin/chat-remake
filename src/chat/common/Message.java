@@ -9,6 +9,7 @@ public class Message extends Sendable {
 
     private Object contents;
 
+    public Message(Serializable contents) {this.contents = contents;}
 
     public Message(Serializable source, Serializable contents) {
         super(source);
