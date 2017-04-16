@@ -9,7 +9,7 @@ public abstract class Sendable implements Serializable {
 
     private Object source;
 
-    public Sendable(Object source) {
+    public Sendable(Serializable source) {
         this.source = source;
     }
 
