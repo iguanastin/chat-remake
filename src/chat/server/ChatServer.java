@@ -51,11 +51,15 @@ public class ChatServer extends AbstractServer {
             if (msg instanceof Event) {
                 handleEventFromClient((Event) msg, client);
             } else if (msg instanceof Message) {
-
+                handleActualMessageFromClient(client, (Message) msg);
             }
         } else {
             System.err.println("Received non-Sendable object: " + msg);
         }
+    }
+
+    private void handleActualMessageFromClient(ConnectionToClient client, Message msg) {
+        sendToAllClients(msg);
     }
 
     private void handleEventFromClient(Event event, ConnectionToClient client) {

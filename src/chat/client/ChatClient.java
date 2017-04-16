@@ -1,6 +1,7 @@
 package chat.client;
 
 import chat.common.Event;
+import chat.common.Message;
 import chat.common.Sendable;
 import ocsf.client.AbstractClient;
 
@@ -10,23 +11,15 @@ public class ChatClient extends AbstractClient {
 
     private String id = "";
 
+    private ClientInterface ui;
+
 
     public ChatClient(String host, int port) {
         super(host, port);
     }
 
-    public static void main(String[] args) {
-        try {
-            System.out.println("Initializing...");
-            System.out.println("Connecting...");
-
-            ChatClient client = new ChatClient(args[0], Integer.parseInt(args[1]));
-
-            client.connect();
-            client.sendAndDisconnect();
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
+    public ChatClient() {
+        super(null, -1);
     }
 
     //------------------ Functionality ---------------------------------------------------------------------------------
@@ -44,8 +37,26 @@ public class ChatClient extends AbstractClient {
         }
     }
 
-    private void connect() throws IOException {
+    private void connect(String password) throws IOException {
         openConnection();
+        sendToServer(new Event(id, Event.EVENT_LOGIN, new String[]{id, password}));
+    }
+
+    public boolean hasInterface() {
+        return ui != null;
+    }
+
+    public void setInterface(ClientInterface ui) {
+        this.ui = ui;
+    }
+
+    public boolean setId(String id) {
+        if (!isConnected()) {
+            this.id = id;
+            return true;
+        }
+
+        return false;
     }
 
     //-------------- Handlers ------------------------------------------------------------------------------------------
@@ -55,10 +66,18 @@ public class ChatClient extends AbstractClient {
         if (msg instanceof Sendable) {
             if (msg instanceof Event) {
                 handleEventFromServer((Event) msg);
+            } else if (msg instanceof Message) {
+                handleActualMessageFromServer((Message) msg);
             }
         } else {
             System.err.println("Received non-Sendable object: " + msg);
         }
+    }
+
+    private void handleActualMessageFromServer(Message msg) {
+
+
+        if (hasInterface()) ui.messageReceived(msg);
     }
 
     private void handleEventFromServer(Event event) {
@@ -69,17 +88,8 @@ public class ChatClient extends AbstractClient {
                 ex.printStackTrace();
             }
         }
+
+        if (hasInterface()) ui.eventReceived(event);
     }
 
-    //----------------- Callbacks --------------------------------------------------------------------------------------
-
-    @Override
-    protected void connectionEstablished() {
-        System.out.println("Connected to " + getHost() + ":" + getPort());
-    }
-
-    @Override
-    protected void connectionClosed() {
-        System.out.println("Disconnected from " + getHost() + ":" + getPort());
-    }
 }
