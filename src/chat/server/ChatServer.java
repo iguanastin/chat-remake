@@ -7,6 +7,7 @@ import ocsf.server.AbstractServer;
 import ocsf.server.ConnectionToClient;
 
 import java.io.IOException;
+import java.io.Serializable;
 
 public class ChatServer extends AbstractServer {
 
@@ -66,6 +67,15 @@ public class ChatServer extends AbstractServer {
         if (event.getType() == Event.EVENT_DISCONNECT) {
             try {
                 client.close();
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        } else if (event.getType() == Event.EVENT_LOGIN_REQUEST) {
+            String id = (String) event.getData()[0];
+            String password = (String) event.getData()[1];
+
+            try {
+                client.sendToClient(new Event(Event.EVENT_LOGIN_SUCCESS, new Serializable[]{id}));
             } catch (IOException ex) {
                 ex.printStackTrace();
             }

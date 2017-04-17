@@ -8,7 +8,9 @@ import java.io.Serializable;
 public class Event extends Sendable {
 
     public static final int EVENT_DISCONNECT = 0;
-    public static final int EVENT_LOGIN = 1;
+    public static final int EVENT_LOGIN_REQUEST = 1;
+    public static final int EVENT_LOGIN_SUCCESS = 2;
+    public static final int EVENT_LOGIN_FAIL = 3;
 
 
     private int type;

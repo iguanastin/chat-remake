@@ -10,6 +10,7 @@ import java.io.IOException;
 public class ChatClient extends AbstractClient {
 
     private String id = "";
+    private boolean loggedIn = false;
 
     private ClientInterface ui;
 
@@ -24,22 +25,25 @@ public class ChatClient extends AbstractClient {
 
     //------------------ Functionality ---------------------------------------------------------------------------------
 
-    private void disconnect() throws IOException {
+    public void forceDisconnect() throws IOException {
         if (isConnected()) {
+            loggedIn = false;
             closeConnection();
         }
     }
 
-    private void sendAndDisconnect() throws IOException {
+    public void cleanDisconnect() throws IOException {
         if (isConnected()) {
             sendToServer(new Event(id, Event.EVENT_DISCONNECT));
-            disconnect();
+            forceDisconnect();
         }
     }
 
-    private void connect(String password) throws IOException {
+    public void connect(String id, String password) throws IOException {
+        this.id = id;
+
         openConnection();
-        sendToServer(new Event(id, Event.EVENT_LOGIN, new String[]{id, password}));
+        sendToServer(new Event(Event.EVENT_LOGIN_REQUEST, new String[]{id, password}));
     }
 
     public boolean hasInterface() {
@@ -50,13 +54,12 @@ public class ChatClient extends AbstractClient {
         this.ui = ui;
     }
 
-    public boolean setId(String id) {
-        if (!isConnected()) {
-            this.id = id;
-            return true;
-        }
+    public String getId() {
+        return id;
+    }
 
-        return false;
+    public boolean isLoggedIn() {
+        return loggedIn;
     }
 
     //-------------- Handlers ------------------------------------------------------------------------------------------
@@ -83,10 +86,12 @@ public class ChatClient extends AbstractClient {
     private void handleEventFromServer(Event event) {
         if (event.getType() == Event.EVENT_DISCONNECT) {
             try {
-                disconnect();
+                forceDisconnect();
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
+        } else if (event.getType() == Event.EVENT_LOGIN_SUCCESS) {
+            loggedIn = true;
         }
 
         if (hasInterface()) ui.eventReceived(event);
