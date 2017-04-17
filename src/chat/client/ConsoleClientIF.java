@@ -109,7 +109,7 @@ public class ConsoleClientIF implements ClientInterface {
             System.out.println("[Logged in successfully!]");
         }
         if (event.getType() == Event.EVENT_LOGIN_FAIL) {
-            System.err.println("[Failed to log in!]");
+            System.err.println("[Failed to log in: " + event.getData()[0] + "]");
         }
     }
 

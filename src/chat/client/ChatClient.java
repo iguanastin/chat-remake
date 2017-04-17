@@ -9,11 +9,17 @@ import java.io.IOException;
 
 public class ChatClient extends AbstractClient {
 
-    private String id = "";
+    //---------------- Instance Variables ------------------------------------------------------------------------------
+
+    private String id;
+
     private boolean loggedIn = false;
+    private boolean loggingIn = false;
 
     private ClientInterface ui;
 
+
+    //------------------ Constructors ----------------------------------------------------------------------------------
 
     public ChatClient(String host, int port) {
         super(host, port);
@@ -23,11 +29,12 @@ public class ChatClient extends AbstractClient {
         super(null, -1);
     }
 
-    //------------------ Functionality ---------------------------------------------------------------------------------
+    //------------------ Methods ---------------------------------------------------------------------------------------
 
     public void forceDisconnect() throws IOException {
         if (isConnected()) {
             loggedIn = false;
+            loggingIn = false;
             closeConnection();
         }
     }
@@ -42,9 +49,13 @@ public class ChatClient extends AbstractClient {
     public void connect(String id, String password) throws IOException {
         this.id = id;
 
+        loggedIn = true;
+
         openConnection();
         sendToServer(new Event(Event.EVENT_LOGIN_REQUEST, new String[]{id, password}));
     }
+
+    //----------------- Getters/Setters --------------------------------------------------------------------------------
 
     public boolean hasInterface() {
         return ui != null;
@@ -60,6 +71,10 @@ public class ChatClient extends AbstractClient {
 
     public boolean isLoggedIn() {
         return loggedIn;
+    }
+
+    public boolean isLoggingIn() {
+        return loggingIn;
     }
 
     //-------------- Handlers ------------------------------------------------------------------------------------------
@@ -78,8 +93,6 @@ public class ChatClient extends AbstractClient {
     }
 
     private void handleActualMessageFromServer(Message msg) {
-
-
         if (hasInterface()) ui.messageReceived(msg);
     }
 
@@ -92,6 +105,9 @@ public class ChatClient extends AbstractClient {
             }
         } else if (event.getType() == Event.EVENT_LOGIN_SUCCESS) {
             loggedIn = true;
+            loggingIn = false;
+        } else if (event.getType() == Event.EVENT_LOGIN_FAIL) {
+            loggingIn = false;
         }
 
         if (hasInterface()) ui.eventReceived(event);
