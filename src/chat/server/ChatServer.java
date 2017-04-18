@@ -171,6 +171,7 @@ public class ChatServer extends AbstractServer {
         } else {
             try {
                 client.sendToClient(new LoginSuccessEvent(login.getId()));
+                sendToAllClients(new UserConnectedEvent(login.getId()));
                 user.setClient(client);
             } catch (IOException ex) {
                 ex.printStackTrace();
@@ -194,7 +195,11 @@ public class ChatServer extends AbstractServer {
     protected synchronized void clientDisconnected(ConnectionToClient client) {
         System.out.println("Client Disconnected: " + client);
 
-        if (getUserData(client) != null) getUserData(client).setClient(null);
+        UserData user = getUserData(client);
+        if (user != null) {
+            user.setClient(null);
+            sendToAllClients(new UserDisconnectedEvent(user.getId()));
+        }
     }
 
 }

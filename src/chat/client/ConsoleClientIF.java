@@ -1,10 +1,7 @@
 package chat.client;
 
-import chat.common.events.DisconnectEvent;
-import chat.common.events.Event;
+import chat.common.events.*;
 import chat.common.Message;
-import chat.common.events.LoginFailedEvent;
-import chat.common.events.LoginSuccessEvent;
 
 import java.io.IOException;
 import java.util.Scanner;
@@ -113,6 +110,12 @@ public class ConsoleClientIF implements ClientInterface {
         }
         if (event instanceof LoginFailedEvent) {
             System.err.println("[Failed to log in (" + ((LoginFailedEvent) event).getMessage() + ")]");
+        }
+        if (event instanceof UserConnectedEvent) {
+            System.out.println("[User joined: " + ((UserConnectedEvent) event).getId() + "]");
+        }
+        if (event instanceof UserDisconnectedEvent) {
+            System.out.println("[User left: " + ((UserDisconnectedEvent) event).getId() + "]");
         }
     }
 
