@@ -1,7 +1,10 @@
 package chat.client;
 
-import chat.common.Event;
+import chat.common.events.DisconnectEvent;
+import chat.common.events.Event;
 import chat.common.Message;
+import chat.common.events.LoginFailedEvent;
+import chat.common.events.LoginSuccessEvent;
 
 import java.io.IOException;
 import java.util.Scanner;
@@ -89,7 +92,7 @@ public class ConsoleClientIF implements ClientInterface {
         }
 
         try {
-            client.sendToServer(new Message(message));
+            client.sendToServer(new Message(client.getId(), message));
         } catch (IOException ex) {
             System.out.println("[Error sending message to server]");
         }
@@ -102,42 +105,45 @@ public class ConsoleClientIF implements ClientInterface {
 
     @Override
     public void eventReceived(Event event) {
-        if (event.getType() == Event.EVENT_DISCONNECT) {
+        if (event instanceof DisconnectEvent) {
             System.out.println("[Disconnected]");
         }
-        if (event.getType() == Event.EVENT_LOGIN_SUCCESS) {
-            System.out.println("[Logged in successfully!]");
+        if (event instanceof LoginSuccessEvent) {
+            System.out.println("[Logged in successfully as: " + ((LoginSuccessEvent) event).getId() + "]");
         }
-        if (event.getType() == Event.EVENT_LOGIN_FAIL) {
-            System.err.println("[Failed to log in: " + event.getData()[0] + "]");
+        if (event instanceof LoginFailedEvent) {
+            System.err.println("[Failed to log in (" + ((LoginFailedEvent) event).getMessage() + ")]");
         }
     }
 
     //------------ Commands --------------------------------------------------------------------------------------------
 
     private void commandConnect(String remaining) {
-        if (remaining == null || remaining.isEmpty()) {
-            System.out.println("Missing username and password");
+        if (client.isLoggedIn()) {
+            System.err.println("Already connected");
+        } else if (remaining == null || remaining.isEmpty()) {
+            System.err.println("Missing username and password");
         } else if (!remaining.contains(" ") || remaining.split(" ").length > 2) {
-            System.out.println("Invalid format. Expected: /connect [USERNAME] [PASSWORD]");
+            System.err.println("Invalid format. Expected: /connect [USERNAME] [PASSWORD]");
         } else {
             String[] split = remaining.split(" ");
             try {
                 client.connect(split[0], split[1]);
             } catch (IOException ex) {
-                System.out.println("[Error Sending Login Token]");
+                System.err.println("[Error Sending Login Token]");
             }
         }
     }
 
     private void commandDisconnect() {
         if (!client.isConnected()) {
-            System.out.println("Cannot disconnect while not connected");
+            System.err.println("Cannot disconnect while not connected");
         } else {
             try {
                 client.cleanDisconnect();
+                client.handleMessageFromServer(new DisconnectEvent());
             } catch (IOException ex) {
-                System.out.println("[Error Disconnecting]");
+                System.err.println("[Error Disconnecting]");
             }
         }
     }

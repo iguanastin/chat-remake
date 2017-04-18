@@ -1,6 +1,6 @@
 package chat.client;
 
-import chat.common.Event;
+import chat.common.events.*;
 import chat.common.Message;
 import chat.common.Sendable;
 import ocsf.client.AbstractClient;
@@ -41,7 +41,7 @@ public class ChatClient extends AbstractClient {
 
     public void cleanDisconnect() throws IOException {
         if (isConnected()) {
-            sendToServer(new Event(id, Event.EVENT_DISCONNECT));
+            sendToServer(new DisconnectEvent());
             forceDisconnect();
         }
     }
@@ -52,7 +52,7 @@ public class ChatClient extends AbstractClient {
         loggedIn = true;
 
         openConnection();
-        sendToServer(new Event(Event.EVENT_LOGIN_REQUEST, new String[]{id, password}));
+        sendToServer(new LoginRequestEvent(id, password));
     }
 
     //----------------- Getters/Setters --------------------------------------------------------------------------------
@@ -97,17 +97,23 @@ public class ChatClient extends AbstractClient {
     }
 
     private void handleEventFromServer(Event event) {
-        if (event.getType() == Event.EVENT_DISCONNECT) {
+        if (event instanceof DisconnectEvent) {
             try {
                 forceDisconnect();
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
-        } else if (event.getType() == Event.EVENT_LOGIN_SUCCESS) {
+        } else if (event instanceof LoginSuccessEvent) {
             loggedIn = true;
             loggingIn = false;
-        } else if (event.getType() == Event.EVENT_LOGIN_FAIL) {
+            id = ((LoginSuccessEvent) event).getId();
+        } else if (event instanceof LoginFailedEvent) {
             loggingIn = false;
+            try {
+                cleanDisconnect();
+            } catch (IOException ex) {
+
+            }
         }
 
         if (hasInterface()) ui.eventReceived(event);

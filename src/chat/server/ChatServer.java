@@ -1,6 +1,6 @@
 package chat.server;
 
-import chat.common.Event;
+import chat.common.events.*;
 import chat.common.Message;
 import chat.common.Sendable;
 import ocsf.server.AbstractServer;
@@ -93,8 +93,7 @@ public class ChatServer extends AbstractServer {
 
         for (Thread thread : getClientConnections()) {
             ConnectionToClient client = (ConnectionToClient) thread;
-            client.sendToClient(new Event(SERVER_ID, Event.EVENT_DISCONNECT));
-            client.close();
+            cleanDisconnectClient(client);
         }
 
         stopListening();
@@ -136,12 +135,14 @@ public class ChatServer extends AbstractServer {
     }
 
     private void handleEventFromClient(Event event, ConnectionToClient client) {
-        if (event.getType() == Event.EVENT_DISCONNECT) {
+        if (event instanceof DisconnectEvent) {
             handleEventDisconnect(client);
-        } else if (event.getType() == Event.EVENT_LOGIN_REQUEST) {
+        } else if (event instanceof LoginRequestEvent) {
             handleEventLoginRequest(event, client);
         }
     }
+
+    //-------------- Event handling ------------------------------------------------------------------------------------
 
     private void handleEventDisconnect(ConnectionToClient client) {
         try {
@@ -152,32 +153,34 @@ public class ChatServer extends AbstractServer {
     }
 
     private void handleEventLoginRequest(Event event, ConnectionToClient client) {
-        String id = (String) event.getData()[0];
-        String password = (String) event.getData()[1];
-        UserData user = getUserData(id);
+        LoginRequestEvent login = (LoginRequestEvent) event;
+        UserData user = getUserData(login.getId());
 
         if (user == null) {
             try {
-                client.sendToClient(new Event(Event.EVENT_LOGIN_FAIL, new Serializable[]{"User with ID \"" + id + "\" does not exist"}));
+                client.sendToClient(new LoginFailedEvent("User with ID \"" + login.getId() + "\" does not exist"));
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
-        } else if (!user.getPassword().equals(password)) {
+        } else if (!user.getPassword().equals(login.getPassword())) {
             try {
-                client.sendToClient(new Event(Event.EVENT_LOGIN_FAIL, new Serializable[]{"Incorrect password"}));
-                client.sendToClient(new Event(Event.EVENT_DISCONNECT));
-                client.close();
+                client.sendToClient(new LoginFailedEvent("Incorrect password"));
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
         } else {
             try {
-                client.sendToClient(new Event(Event.EVENT_LOGIN_SUCCESS, new Serializable[]{id}));
-                getUserData(id).setClient(client);
+                client.sendToClient(new LoginSuccessEvent(login.getId()));
+                user.setClient(client);
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
         }
+    }
+
+    private void cleanDisconnectClient(ConnectionToClient client) throws IOException {
+        client.sendToClient(new DisconnectEvent());
+        client.close();
     }
 
     //--------------- Callbacks ----------------------------------------------------------------------------------------

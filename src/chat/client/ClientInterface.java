@@ -1,6 +1,6 @@
 package chat.client;
 
-import chat.common.Event;
+import chat.common.events.Event;
 import chat.common.Message;
 
 /**
