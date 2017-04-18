@@ -115,6 +115,11 @@ public class ChatServer extends AbstractServer {
         return null;
     }
 
+    private void cleanDisconnectClient(ConnectionToClient client) throws IOException {
+        client.sendToClient(new DisconnectEvent());
+        client.close();
+    }
+
     //--------------- Handlers -----------------------------------------------------------------------------------------
 
     @Override
@@ -146,6 +151,8 @@ public class ChatServer extends AbstractServer {
 
     private void handleEventDisconnect(ConnectionToClient client) {
         try {
+            System.out.println(client + " initiated clean disconnect");
+
             client.close();
         } catch (IOException ex) {
             ex.printStackTrace();
@@ -159,12 +166,16 @@ public class ChatServer extends AbstractServer {
         if (user == null) {
             try {
                 client.sendToClient(new LoginFailedEvent("User with ID \"" + login.getId() + "\" does not exist"));
+
+                System.out.println("Login attempt from client " + client + " failed with incorrect id: " + login.getId());
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
         } else if (!user.getPassword().equals(login.getPassword())) {
             try {
                 client.sendToClient(new LoginFailedEvent("Incorrect password"));
+
+                System.out.println("Login attempt from client " + client + " failed with incorrect password for: " + login.getId());
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
@@ -173,15 +184,12 @@ public class ChatServer extends AbstractServer {
                 client.sendToClient(new LoginSuccessEvent(login.getId()));
                 sendToAllClients(new UserConnectedEvent(login.getId()));
                 user.setClient(client);
+
+                System.err.println("Client " + client + " logged in as: " + login.getId());
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
         }
-    }
-
-    private void cleanDisconnectClient(ConnectionToClient client) throws IOException {
-        client.sendToClient(new DisconnectEvent());
-        client.close();
     }
 
     //--------------- Callbacks ----------------------------------------------------------------------------------------
@@ -193,12 +201,14 @@ public class ChatServer extends AbstractServer {
 
     @Override
     protected synchronized void clientDisconnected(ConnectionToClient client) {
-        System.out.println("Client Disconnected: " + client);
-
         UserData user = getUserData(client);
         if (user != null) {
             user.setClient(null);
             sendToAllClients(new UserDisconnectedEvent(user.getId()));
+
+            System.err.println("Client disconnected: " + user.getId());
+        } else {
+            System.out.println("Client disconnected before logging in");
         }
     }
 
