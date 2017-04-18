@@ -1,5 +1,6 @@
 package chat.client;
 
+import chat.common.PrivateMessage;
 import chat.common.events.*;
 import chat.common.Message;
 
@@ -79,6 +80,10 @@ public class ConsoleClientIF implements ClientInterface {
             commandDisconnect();
         } else if (command.equals("connect")) {
             commandConnect(remaining);
+        } else if (command.equals("w") || command.equals("whisper") || command.equals("pm")) {
+            commandPrivateMessage(remaining);
+        } else {
+            System.err.println("No known command \"" + command + "\"");
         }
     }
 
@@ -103,19 +108,17 @@ public class ConsoleClientIF implements ClientInterface {
     @Override
     public void eventReceived(Event event) {
         if (event instanceof DisconnectEvent) {
-            System.out.println("[Disconnected]");
-        }
-        if (event instanceof LoginSuccessEvent) {
-            System.out.println("[Logged in successfully as: " + ((LoginSuccessEvent) event).getId() + "]");
-        }
-        if (event instanceof LoginFailedEvent) {
+            System.err.println("[Disconnected]");
+        } else if (event instanceof LoginSuccessEvent) {
+            System.err.println("[Logged in successfully as: " + ((LoginSuccessEvent) event).getId() + "]");
+        } else if (event instanceof LoginFailedEvent) {
             System.err.println("[Failed to log in (" + ((LoginFailedEvent) event).getMessage() + ")]");
-        }
-        if (event instanceof UserConnectedEvent) {
-            System.out.println("[User joined: " + ((UserConnectedEvent) event).getId() + "]");
-        }
-        if (event instanceof UserDisconnectedEvent) {
-            System.out.println("[User left: " + ((UserDisconnectedEvent) event).getId() + "]");
+        } else if (event instanceof UserConnectedEvent) {
+            System.err.println("[User joined: " + ((UserConnectedEvent) event).getId() + "]");
+        } else if (event instanceof UserDisconnectedEvent) {
+            System.err.println("[User left: " + ((UserDisconnectedEvent) event).getId() + "]");
+        } else if (event instanceof PrivateMessageFailEvent) {
+            System.err.println("[Failed to send private message: " + ((PrivateMessageFailEvent) event).getMessage() + "]");
         }
     }
 
@@ -159,6 +162,27 @@ public class ConsoleClientIF implements ClientInterface {
         }
 
         System.exit(0);
+    }
+
+    private void commandPrivateMessage(String remaining) {
+        if (!client.isLoggedIn()) {
+            System.err.println("Cannot send private messages while disconnected");
+        } else if (remaining == null || remaining.isEmpty() || !remaining.contains(" ")) {
+            System.err.println("Invalid format, expected: /w [USER] [MESSAGE]");
+        } else {
+            String user = remaining.substring(0, remaining.indexOf(' '));
+            String message = remaining.substring(remaining.indexOf(' ') + 1);
+
+            if (user.equalsIgnoreCase(client.getId())) {
+                System.err.println("Cannot send private messages to yourself");
+            } else {
+                try {
+                    client.sendToServer(new PrivateMessage(user, message));
+                } catch (IOException ex) {
+                    System.err.println("Unable to deliver private message");
+                }
+            }
+        }
     }
 
 }

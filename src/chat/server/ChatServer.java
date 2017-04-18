@@ -1,5 +1,6 @@
 package chat.server;
 
+import chat.common.PrivateMessage;
 import chat.common.events.*;
 import chat.common.Message;
 import chat.common.Sendable;
@@ -120,6 +121,14 @@ public class ChatServer extends AbstractServer {
         client.close();
     }
 
+    private boolean isUserLoggedIn(ConnectionToClient client) {
+        return getUserData(client) != null;
+    }
+
+    private boolean isUserLoggedIn(String id) {
+        return getUserData(id) != null;
+    }
+
     //--------------- Handlers -----------------------------------------------------------------------------------------
 
     @Override
@@ -136,14 +145,49 @@ public class ChatServer extends AbstractServer {
     }
 
     private void handleActualMessageFromClient(ConnectionToClient client, Message msg) {
-        sendToAllClients(msg);
+        if (getUserData(client) == null) {
+            try {
+                cleanDisconnectClient(client);
+            } catch (IOException ex) {
+            }
+        }
+
+        if (msg instanceof PrivateMessage) {
+            handlePrivateMessageFromClient(client, (PrivateMessage) msg);
+        } else {
+            sendToAllClients(msg);
+        }
+    }
+
+    private void handlePrivateMessageFromClient(ConnectionToClient client, PrivateMessage msg) {
+        UserData user = getUserData((String) msg.getDestination());
+        if (user == null) {
+            try {
+                client.sendToClient(new PrivateMessageFailEvent("No such user: " + msg.getDestination()));
+            } catch (IOException ex) {
+            }
+        } else if (user.isLoggedIn()) {
+            try {
+                user.getClient().sendToClient(msg);
+            } catch (IOException ex) {
+            }
+        } else {
+            try {
+                client.sendToClient(new PrivateMessageFailEvent("Target user is offline"));
+            } catch (IOException ex) {
+            }
+        }
     }
 
     private void handleEventFromClient(Event event, ConnectionToClient client) {
-        if (event instanceof DisconnectEvent) {
-            handleEventDisconnect(client);
-        } else if (event instanceof LoginRequestEvent) {
-            handleEventLoginRequest(event, client);
+        if (isUserLoggedIn(client)) {
+            //Normal events
+        } else {
+            if (event instanceof LoginRequestEvent) {
+                handleEventLoginRequest(event, client);
+            } else if (event instanceof DisconnectEvent) {
+                handleEventDisconnect(client);
+            }
         }
     }
 
