@@ -82,6 +82,10 @@ public class ConsoleClientIF implements ClientInterface {
             commandConnect(remaining);
         } else if (command.equals("w") || command.equals("whisper") || command.equals("pm")) {
             commandPrivateMessage(remaining);
+        } else if (command.equals("sethost")) {
+            commandSetHost(remaining);
+        } else if (command.equals("setport")) {
+            commandSetPort(remaining);
         } else {
             System.err.println("No known command \"" + command + "\"");
         }
@@ -181,6 +185,40 @@ public class ConsoleClientIF implements ClientInterface {
                 } catch (IOException ex) {
                     System.err.println("Unable to deliver private message");
                 }
+            }
+        }
+    }
+
+    private void commandSetHost(String remaining) {
+        if (client.isConnected()) {
+            System.err.println("Cannot change host while connected");
+        } else if (remaining == null || remaining.isEmpty() || remaining.contains(" ")) {
+            System.err.println("Invalid format. Expected: /sethost [HOSTNAME/IP]");
+        } else {
+            client.setHost(remaining);
+
+            System.err.println("Changed host to: " + remaining);
+        }
+    }
+
+    private void commandSetPort(String remaining) {
+        if (client.isConnected()) {
+            System.err.println("Cannot change port while connected");
+        } else if (remaining == null || remaining.isEmpty() || remaining.contains(" ")) {
+            System.err.println("Invalid format. Expected: /setport [PORT]");
+        } else {
+            try {
+                int port = Integer.parseInt(remaining);
+
+                if (port <= 1024 || port > 65536) {
+                    System.err.println("Invalid value. Expected value in range (1024-65536]");
+                } else {
+                    client.setPort(port);
+
+                    System.err.println("Set port to: " + port);
+                }
+            } catch (NumberFormatException ex) {
+                System.err.println("Invalid format. Port must be an integer");
             }
         }
     }
