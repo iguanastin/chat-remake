@@ -14,7 +14,7 @@ public class ConsoleClientIF implements ClientInterface {
 
     //------------ Static Variables ------------------------------------------------------------------------------------
 
-    private static final char COMMAND_DELIMITER = '/';
+    private static final char COMMAND_IDENTIFIER = '/';
 
     //------------ Instance Variables ----------------------------------------------------------------------------------
 
@@ -53,7 +53,7 @@ public class ConsoleClientIF implements ClientInterface {
 
             if (input.isEmpty()) continue;
 
-            if (input.charAt(0) == COMMAND_DELIMITER) {
+            if (input.charAt(0) == COMMAND_IDENTIFIER) {
                 handleCommand(input);
             } else {
                 handleMessage(input);
@@ -106,7 +106,7 @@ public class ConsoleClientIF implements ClientInterface {
 
     @Override
     public void messageReceived(Message message) {
-        System.out.println("[" + message.getSource() + "]: " + message.getContents());
+        System.out.println(message);
     }
 
     @Override

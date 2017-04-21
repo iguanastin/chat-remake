@@ -20,4 +20,9 @@ public class Message extends Sendable {
         return contents;
     }
 
+    @Override
+    public String toString() {
+        return "[" + getSource() + "]: " + getContents();
+    }
+
 }

@@ -16,4 +16,9 @@ public class PrivateMessage extends Message {
         return destination;
     }
 
+    @Override
+    public String toString() {
+        return "[" + getSource() + "->" + getDestination() + "]: " + getContents();
+    }
+
 }
