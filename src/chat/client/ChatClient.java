@@ -1,80 +1,122 @@
 package chat.client;
 
-import chat.common.Event;
+import chat.common.events.*;
+import chat.common.Message;
+import chat.common.Sendable;
 import ocsf.client.AbstractClient;
 
 import java.io.IOException;
 
 public class ChatClient extends AbstractClient {
 
-    private String id = "";
+    //---------------- Instance Variables ------------------------------------------------------------------------------
 
+    private String id;
+
+    private boolean loggedIn = false;
+    private boolean loggingIn = false;
+
+    private ClientInterface ui;
+
+
+    //------------------ Constructors ----------------------------------------------------------------------------------
 
     public ChatClient(String host, int port) {
         super(host, port);
     }
 
-    public static void main(String[] args) {
-        try {
-            System.out.println("Initializing...");
-            System.out.println("Connecting...");
-
-            ChatClient client = new ChatClient(args[0], Integer.parseInt(args[1]));
-
-            client.connect();
-            client.sendAndDisconnect();
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
+    public ChatClient() {
+        super(null, -1);
     }
 
-    //------------------ Functionality ---------------------------------------------------------------------------------
+    //------------------ Methods ---------------------------------------------------------------------------------------
 
-    private void disconnect() throws IOException {
+    public void forceDisconnect() throws IOException {
         if (isConnected()) {
+            loggedIn = false;
+            loggingIn = false;
             closeConnection();
         }
     }
 
-    private void sendAndDisconnect() throws IOException {
+    public void cleanDisconnect() throws IOException {
         if (isConnected()) {
-            sendToServer(new Event(id, Event.EVENT_DISCONNECT));
-            disconnect();
+            sendToServer(new DisconnectEvent());
+            forceDisconnect();
         }
     }
 
-    private void connect() throws IOException {
+    public void connect(String id, String password) throws IOException {
+        this.id = id;
+
+        loggedIn = true;
+
         openConnection();
+        sendToServer(new LoginRequestEvent(id, password));
+    }
+
+    //----------------- Getters/Setters --------------------------------------------------------------------------------
+
+    public boolean hasInterface() {
+        return ui != null;
+    }
+
+    public void setInterface(ClientInterface ui) {
+        this.ui = ui;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public boolean isLoggedIn() {
+        return loggedIn;
+    }
+
+    public boolean isLoggingIn() {
+        return loggingIn;
     }
 
     //-------------- Handlers ------------------------------------------------------------------------------------------
 
     @Override
     protected void handleMessageFromServer(Object msg) {
-        if (msg instanceof Event) {
-            handleEventFromServer((Event) msg);
+        if (msg instanceof Sendable) {
+            if (msg instanceof Event) {
+                handleEventFromServer((Event) msg);
+            } else if (msg instanceof Message) {
+                handleActualMessageFromServer((Message) msg);
+            }
+        } else {
+            System.err.println("Received non-Sendable object: " + msg);
         }
+    }
+
+    private void handleActualMessageFromServer(Message msg) {
+        if (hasInterface()) ui.messageReceived(msg);
     }
 
     private void handleEventFromServer(Event event) {
-        if (event.getType() == Event.EVENT_DISCONNECT) {
+        if (event instanceof DisconnectEvent) {
             try {
-                disconnect();
+                forceDisconnect();
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
+        } else if (event instanceof LoginSuccessEvent) {
+            loggedIn = true;
+            loggingIn = false;
+            id = ((LoginSuccessEvent) event).getId();
+        } else if (event instanceof LoginFailedEvent) {
+            loggingIn = false;
+            try {
+                cleanDisconnect();
+            } catch (IOException ex) {
+
+            }
         }
+
+        if (hasInterface()) ui.eventReceived(event);
     }
 
-    //----------------- Callbacks --------------------------------------------------------------------------------------
-
-    @Override
-    protected void connectionEstablished() {
-        System.out.println("Connected to " + getHost() + ":" + getPort());
-    }
-
-    @Override
-    protected void connectionClosed() {
-        System.out.println("Disconnected from " + getHost() + ":" + getPort());
-    }
 }

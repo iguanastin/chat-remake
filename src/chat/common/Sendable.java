@@ -9,12 +9,16 @@ public abstract class Sendable implements Serializable {
 
     private Object source;
 
-    public Sendable(Object source) {
+    public Sendable() {}
+
+    public Sendable(Serializable source) {
         this.source = source;
     }
 
     public Object getSource() {
         return source;
     }
+
+    public void setSource(Serializable source) {this.source = source;}
 
 }
