@@ -49,10 +49,10 @@ public class ChatClient extends AbstractClient {
     public void connect(String id, String password) throws IOException {
         this.id = id;
 
-        loggedIn = true;
+        loggingIn = true;
 
         openConnection();
-        sendToServer(new LoginRequestEvent(id, password));
+        sendToServer(new LoginEvent(id, password, LoginEvent.LOGIN_REQUEST));
     }
 
     //----------------- Getters/Setters --------------------------------------------------------------------------------
@@ -103,16 +103,20 @@ public class ChatClient extends AbstractClient {
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
-        } else if (event instanceof LoginSuccessEvent) {
-            loggedIn = true;
-            loggingIn = false;
-            id = ((LoginSuccessEvent) event).getId();
-        } else if (event instanceof LoginFailedEvent) {
-            loggingIn = false;
-            try {
-                cleanDisconnect();
-            } catch (IOException ex) {
+        } else if (event instanceof LoginEvent) {
+            LoginEvent login = (LoginEvent) event;
 
+            if (login.getType() == LoginEvent.LOGIN_SUCCEED) {
+                loggedIn = true;
+                loggingIn = false;
+                id = login.getId();
+            } else if (login.getType() == LoginEvent.LOGIN_FAIL) {
+                loggingIn = false;
+                try {
+                    cleanDisconnect();
+                } catch (IOException ex) {
+
+                }
             }
         }
 

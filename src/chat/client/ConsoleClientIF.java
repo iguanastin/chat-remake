@@ -113,10 +113,10 @@ public class ConsoleClientIF implements ClientInterface {
     public void eventReceived(Event event) {
         if (event instanceof DisconnectEvent) {
             System.err.println("[Disconnected]");
-        } else if (event instanceof LoginSuccessEvent) {
-            System.err.println("[Logged in successfully as: " + ((LoginSuccessEvent) event).getId() + "]");
-        } else if (event instanceof LoginFailedEvent) {
-            System.err.println("[Failed to log in (" + ((LoginFailedEvent) event).getMessage() + ")]");
+        } else if (event instanceof LoginEvent && ((LoginEvent) event).getType() == LoginEvent.LOGIN_SUCCEED) {
+            System.err.println("[Logged in successfully as \"" + ((LoginEvent) event).getId() + "\"]");
+        } else if (event instanceof LoginEvent && ((LoginEvent) event).getType() == LoginEvent.LOGIN_FAIL) {
+            System.err.println("[Failed to log in as \"" + ((LoginEvent) event).getId() + "\" (" + ((LoginEvent) event).getMessage() + ")]");
         } else if (event instanceof UserConnectedEvent) {
             System.err.println("[User joined: " + ((UserConnectedEvent) event).getId() + "]");
         } else if (event instanceof UserDisconnectedEvent) {

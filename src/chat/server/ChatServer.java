@@ -183,7 +183,7 @@ public class ChatServer extends AbstractServer {
         if (isUserLoggedIn(client)) {
             //Normal events
         } else {
-            if (event instanceof LoginRequestEvent) {
+            if (event instanceof LoginEvent) {
                 handleEventLoginRequest(event, client);
             } else if (event instanceof DisconnectEvent) {
                 handleEventDisconnect(client);
@@ -204,12 +204,12 @@ public class ChatServer extends AbstractServer {
     }
 
     private void handleEventLoginRequest(Event event, ConnectionToClient client) {
-        LoginRequestEvent login = (LoginRequestEvent) event;
+        LoginEvent login = (LoginEvent) event;
         UserData user = getUserData(login.getId());
 
         if (user == null) {
             try {
-                client.sendToClient(new LoginFailedEvent("User with ID \"" + login.getId() + "\" does not exist"));
+                client.sendToClient(new LoginEvent(login.getId(), null, LoginEvent.LOGIN_FAIL, "No such ID"));
 
                 System.out.println("Login attempt from client " + client + " failed with incorrect id: " + login.getId());
             } catch (IOException ex) {
@@ -217,7 +217,7 @@ public class ChatServer extends AbstractServer {
             }
         } else if (!user.getPassword().equals(login.getPassword())) {
             try {
-                client.sendToClient(new LoginFailedEvent("Incorrect password"));
+                client.sendToClient(new LoginEvent(login.getId(), null, LoginEvent.LOGIN_FAIL, "Incorrect password"));
 
                 System.out.println("Login attempt from client " + client + " failed with incorrect password for: " + login.getId());
             } catch (IOException ex) {
@@ -225,7 +225,7 @@ public class ChatServer extends AbstractServer {
             }
         } else {
             try {
-                client.sendToClient(new LoginSuccessEvent(login.getId()));
+                client.sendToClient(new LoginEvent(login.getId(), null, LoginEvent.LOGIN_SUCCEED));
                 sendToAllClients(new UserConnectedEvent(login.getId()));
                 user.setClient(client);
 
