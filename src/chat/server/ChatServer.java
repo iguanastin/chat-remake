@@ -149,37 +149,41 @@ public class ChatServer extends AbstractServer {
     }
 
     private void handleActualMessageFromClient(ConnectionToClient client, Message msg) {
-        if (getUserData(client) == null) {
+        if (!isUserLoggedIn(client)) {
             try {
                 cleanDisconnectClient(client);
             } catch (IOException ex) {
             }
         }
 
+        UserData source = getUserData(client);
+        msg.setSource(source.getId());
+
         if (msg instanceof PrivateMessage) {
-            handlePrivateMessageFromClient(client, (PrivateMessage) msg);
+            handlePrivateMessageFromClient(source, (PrivateMessage) msg);
         } else {
-            sendToAllClients(msg);
+            handleGlobalMessageFromClient(source, msg);
         }
     }
 
-    private void handlePrivateMessageFromClient(ConnectionToClient client, PrivateMessage msg) {
-        UserData user = getUserData((String) msg.getDestination());
-        if (user == null) {
-            try {
-                client.sendToClient(new PrivateMessageFailEvent("No such user: " + msg.getDestination()));
-            } catch (IOException ex) {
+    private void handleGlobalMessageFromClient(UserData source, Message msg) {
+        for (UserData user : users) {
+            if (user.isLoggedIn() && !user.isBlocking(source.getId())) {
+                user.send(msg);
             }
-        } else if (user.isLoggedIn()) {
-            try {
-                user.getClient().sendToClient(msg);
-            } catch (IOException ex) {
-            }
+        }
+    }
+
+    private void handlePrivateMessageFromClient(UserData source, PrivateMessage msg) {
+        UserData destination = getUserData((String) msg.getDestination());
+        if (destination == null) {
+            source.send(new PrivateMessageFailEvent("No such user: " + msg.getDestination()));
+        } else if (destination.isBlocking(source.getId())) {
+            source.send(new PrivateMessageFailEvent("Target user is blocking you"));
+        } else if (destination.isLoggedIn()) {
+            destination.send(msg);
         } else {
-            try {
-                client.sendToClient(new PrivateMessageFailEvent("Target user is offline"));
-            } catch (IOException ex) {
-            }
+            source.send(new PrivateMessageFailEvent("Target user is offline"));
         }
     }
 
