@@ -86,6 +86,10 @@ public class ConsoleClientIF implements ClientInterface {
             commandSetHost(remaining);
         } else if (command.equals("setport")) {
             commandSetPort(remaining);
+        } else if (command.equals("block")) {
+            commandBlock(remaining);
+        } else if (command.equals("unblock")) {
+            commandUnblock(remaining);
         } else {
             System.err.println("No known command \"" + command + "\"");
         }
@@ -112,17 +116,33 @@ public class ConsoleClientIF implements ClientInterface {
     @Override
     public void eventReceived(Event event) {
         if (event instanceof DisconnectEvent) {
-            System.err.println("[Disconnected]");
-        } else if (event instanceof LoginEvent && ((LoginEvent) event).getType() == LoginEvent.LOGIN_SUCCEED) {
-            System.err.println("[Logged in successfully as \"" + ((LoginEvent) event).getId() + "\"]");
-        } else if (event instanceof LoginEvent && ((LoginEvent) event).getType() == LoginEvent.LOGIN_FAIL) {
-            System.err.println("[Failed to log in as \"" + ((LoginEvent) event).getId() + "\" (" + ((LoginEvent) event).getMessage() + ")]");
+            System.err.println("Disconnected");
+        } else if (event instanceof LoginEvent) {
+            LoginEvent login = (LoginEvent) event;
+
+            if (login.getType() == LoginEvent.LOGIN_SUCCEED) {
+                System.err.println("Logged in successfully as \"" + login.getId() + "\"");
+            } else if (login.getType() == LoginEvent.LOGIN_FAIL) {
+                System.err.println("Failed to log in as \"" + login.getId() + "\" (" + login.getMessage() + ")");
+            }
         } else if (event instanceof UserConnectedEvent) {
-            System.err.println("[User joined: " + ((UserConnectedEvent) event).getId() + "]");
+            System.err.println("User joined: " + ((UserConnectedEvent) event).getId());
         } else if (event instanceof UserDisconnectedEvent) {
-            System.err.println("[User left: " + ((UserDisconnectedEvent) event).getId() + "]");
+            System.err.println("User left: " + ((UserDisconnectedEvent) event).getId());
         } else if (event instanceof PrivateMessageFailEvent) {
-            System.err.println("[Failed to send private message: " + ((PrivateMessageFailEvent) event).getMessage() + "]");
+            System.err.println("Failed to send private message: " + ((PrivateMessageFailEvent) event).getMessage());
+        } else if (event instanceof BlockEvent) {
+            BlockEvent block = (BlockEvent) event;
+
+            if (block.getType() == BlockEvent.BLOCK_FAIL) {
+                System.err.println("Failed to block user \"" + block.getTarget() + "\" (" + block.getMessage() + ")");
+            } else if (block.getType() == BlockEvent.BLOCK_SUCCEED) {
+                System.err.println("Successfully blocked user \"" + block.getTarget() + "\"");
+            } else if (block.getType() == BlockEvent.UNBLOCK_FAIL) {
+                System.err.println("Failed to unblock user \"" + block.getTarget() + "\" (" + block.getMessage() + ")");
+            } else if (block.getType() == BlockEvent.UNBLOCK_SUCCEED) {
+                System.err.println("Successfully unblocked user \"" + block.getTarget() + "\"");
+            }
         }
     }
 
@@ -219,6 +239,34 @@ public class ConsoleClientIF implements ClientInterface {
                 }
             } catch (NumberFormatException ex) {
                 System.err.println("Invalid format. Port must be an integer");
+            }
+        }
+    }
+
+    private void commandBlock(String remaining) {
+        if (!client.isConnected()) {
+            System.err.println("Cannot block users while not connected");
+        } else if (remaining == null || remaining.isEmpty() || remaining.contains(" ")) {
+            System.err.println("Invalid format. Expected: /block [ID]");
+        } else {
+            try {
+                client.sendToServer(new BlockEvent(remaining, BlockEvent.BLOCK));
+            } catch (IOException ex) {
+                System.err.println("Failed to send block event");
+            }
+        }
+    }
+
+    private void commandUnblock(String remaining) {
+        if (!client.isConnected()) {
+            System.err.println("Cannot unblock users while not connected");
+        } else if (remaining == null || remaining.isEmpty() || remaining.contains(" ")) {
+            System.err.println("Invalid format. Expected: /unblock [ID]");
+        } else {
+            try {
+                client.sendToServer(new BlockEvent(remaining, BlockEvent.UNBLOCK));
+            } catch (IOException ex) {
+                System.err.println("Failed to send unblock event");
             }
         }
     }

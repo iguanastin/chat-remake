@@ -1,6 +1,10 @@
 package chat.server;
 
+import chat.common.Sendable;
 import ocsf.server.ConnectionToClient;
+
+import java.io.IOException;
+import java.util.ArrayList;
 
 public class UserData {
 
@@ -9,13 +13,32 @@ public class UserData {
     private String id;
     private String password;
     private ConnectionToClient client;
+    private ArrayList<String> blocked;
 
 
     //------------- Constructors ---------------------------------------------------------------------------------------
 
     public UserData(String id, String password) {
+        blocked = new ArrayList<>();
+
         setId(id);
         setPassword(password);
+    }
+
+    //------------- Functionality --------------------------------------------------------------------------------------
+
+    public boolean send(Sendable message) {
+        if (isLoggedIn()) {
+            try {
+                getClient().sendToClient(message);
+
+                return true;
+            } catch (IOException ex) {
+                return false;
+            }
+        } else {
+            return false;
+        }
     }
 
     //--------- Getters/Setters ----------------------------------------------------------------------------------------
@@ -55,4 +78,31 @@ public class UserData {
     public boolean isLoggedIn() {
         return getClient() != null;
     }
+
+    public ArrayList<String> getBlocked() {
+        return blocked;
+    }
+
+    public boolean isBlocking(String id) {
+        return blocked.contains(id);
+    }
+
+    public boolean block(String id) {
+        if (!isBlocking(id)) {
+            blocked.add(id);
+            return true;
+        }
+
+        return false;
+    }
+
+    public boolean unblock(String id) {
+        if (isBlocking(id)) {
+            blocked.remove(id);
+            return true;
+        }
+
+        return false;
+    }
+
 }

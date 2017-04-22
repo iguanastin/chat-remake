@@ -18,10 +18,6 @@ public class LoginEvent extends Event {
     }
 
     public LoginEvent(String id, String password, int type, String message) {
-        set(id, password, type, message);
-    }
-
-    public void set(String id, String password, int type, String message) {
         this.id = id;
         this.password = password;
         this.type = type;

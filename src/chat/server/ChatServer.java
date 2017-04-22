@@ -129,6 +129,10 @@ public class ChatServer extends AbstractServer {
         return getUserData(id) != null;
     }
 
+    private boolean userExists(String id) {
+        return getUserData(id) != null;
+    }
+
     //--------------- Handlers -----------------------------------------------------------------------------------------
 
     @Override
@@ -180,11 +184,21 @@ public class ChatServer extends AbstractServer {
     }
 
     private void handleEventFromClient(Event event, ConnectionToClient client) {
-        if (isUserLoggedIn(client)) {
-            //Normal events
+        UserData user = getUserData(client);
+
+        if (user != null) {
+            if (event instanceof BlockEvent) {
+                BlockEvent block = (BlockEvent) event;
+
+                if (block.getType() == BlockEvent.BLOCK) {
+                    handleEventBlock(block, user);
+                } else if (block.getType() == BlockEvent.UNBLOCK) {
+                    handleEventUnblock(block, user);
+                }
+            }
         } else {
             if (event instanceof LoginEvent) {
-                handleEventLoginRequest(event, client);
+                handleEventLogin(event, client);
             } else if (event instanceof DisconnectEvent) {
                 handleEventDisconnect(client);
             }
@@ -198,12 +212,13 @@ public class ChatServer extends AbstractServer {
             System.out.println(client + " initiated clean disconnect");
 
             client.close();
+            clientDisconnected(client);
         } catch (IOException ex) {
             ex.printStackTrace();
         }
     }
 
-    private void handleEventLoginRequest(Event event, ConnectionToClient client) {
+    private void handleEventLogin(Event event, ConnectionToClient client) {
         LoginEvent login = (LoginEvent) event;
         UserData user = getUserData(login.getId());
 
@@ -212,6 +227,14 @@ public class ChatServer extends AbstractServer {
                 client.sendToClient(new LoginEvent(login.getId(), null, LoginEvent.LOGIN_FAIL, "No such ID"));
 
                 System.out.println("Login attempt from client " + client + " failed with incorrect id: " + login.getId());
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        } else if (user.isLoggedIn()) {
+            try {
+                client.sendToClient(new LoginEvent(login.getId(), null, LoginEvent.LOGIN_FAIL, "User with that name is already logged in"));
+
+                System.out.println("Login attempt from client " + client + " failed with username already in use: " + login.getId());
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
@@ -233,6 +256,34 @@ public class ChatServer extends AbstractServer {
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
+        }
+    }
+
+    private void handleEventBlock(BlockEvent event, UserData user) {
+        if (!userExists(event.getTarget())) {
+            user.send(new BlockEvent(event.getTarget(), BlockEvent.BLOCK_FAIL, "No such user"));
+        } else if (event.getTarget().equals(user.getId())) {
+            user.send(new BlockEvent(event.getTarget(), BlockEvent.BLOCK_FAIL, "Cannot block yourself"));
+        } else if (user.isBlocking(event.getTarget())) {
+            user.send(new BlockEvent(event.getTarget(), BlockEvent.BLOCK_FAIL, "Already blocking user"));
+        } else {
+            user.block(event.getTarget());
+
+            user.send(new BlockEvent(event.getTarget(), BlockEvent.BLOCK_SUCCEED));
+        }
+    }
+
+    private void handleEventUnblock(BlockEvent event, UserData user) {
+        if (!userExists(event.getTarget())) {
+            user.send(new BlockEvent(event.getTarget(), BlockEvent.UNBLOCK_FAIL, "No such user"));
+        } else if (event.getTarget().equals(user.getId())) {
+            user.send(new BlockEvent(event.getTarget(), BlockEvent.UNBLOCK_FAIL, "Cannot unblock yourself"));
+        } else if (!user.isBlocking(event.getTarget())) {
+            user.send(new BlockEvent(event.getTarget(), BlockEvent.UNBLOCK_FAIL, "User is already unblocked"));
+        } else {
+            user.unblock(event.getTarget());
+
+            user.send(new BlockEvent(event.getTarget(), BlockEvent.UNBLOCK_SUCCEED));
         }
     }
 
