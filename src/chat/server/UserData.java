@@ -1,6 +1,8 @@
 package chat.server;
 
 import chat.common.Sendable;
+import chat.common.events.DisconnectEvent;
+import chat.common.events.Event;
 import ocsf.server.ConnectionToClient;
 
 import java.io.IOException;
@@ -103,6 +105,17 @@ public class UserData {
         }
 
         return false;
+    }
+
+    public void cleanDisconnect() {
+        if (isLoggedIn()) {
+            send(new DisconnectEvent());
+            try {
+                client.close();
+            } catch (IOException ex) {
+
+            }
+        }
     }
 
 }

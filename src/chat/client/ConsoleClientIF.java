@@ -29,13 +29,6 @@ public class ConsoleClientIF implements ClientInterface {
 
     //----------- Constructors -----------------------------------------------------------------------------------------
 
-    public ConsoleClientIF() {
-        client = new ChatClient();
-        client.setInterface(this);
-
-        receiveInput();
-    }
-
     public ConsoleClientIF(String host, int port) {
         client = new ChatClient(host, port);
         client.setInterface(this);

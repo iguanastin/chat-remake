@@ -15,13 +15,15 @@ public class ChatServer extends AbstractServer {
 
     //------------- Static Variables -----------------------------------------------------------------------------------
 
-    private static final String SERVER_ID = "server";
+    public static final String SERVER_ID = "server";
 
     private static final String USERDATA_FILEPATH = "userdata";
 
     //----------------- Instance Variables -----------------------------------------------------------------------------
 
     private ArrayList<UserData> users = new ArrayList<>();
+
+    private ServerInterface ui;
 
 
     //--------------- Main ---------------------------------------------------------------------------------------------
@@ -48,7 +50,15 @@ public class ChatServer extends AbstractServer {
 
     //----------------- Methods ----------------------------------------------------------------------------------------
 
-    private void loadUserdata() {
+    public void setInterface(ServerInterface ui) {
+        this.ui = ui;
+    }
+
+    public boolean hasInterface() {
+        return ui != null;
+    }
+
+    public void loadUserdata() {
         try {
             Scanner scan = new Scanner(new File(USERDATA_FILEPATH));
 
@@ -71,7 +81,7 @@ public class ChatServer extends AbstractServer {
         }
     }
 
-    private void saveUserData() {
+    public void saveUserData() {
         try {
             PrintWriter writer = new PrintWriter(new File(USERDATA_FILEPATH));
 
@@ -92,10 +102,7 @@ public class ChatServer extends AbstractServer {
     public void stop() throws IOException {
         saveUserData();
 
-        for (Thread thread : getClientConnections()) {
-            ConnectionToClient client = (ConnectionToClient) thread;
-            cleanDisconnectClient(client);
-        }
+        cleanDisconnectAllClients();
 
         stopListening();
     }
@@ -125,12 +132,26 @@ public class ChatServer extends AbstractServer {
         return getUserData(client) != null;
     }
 
-    private boolean isUserLoggedIn(String id) {
+    public boolean isUserLoggedIn(String id) {
         return getUserData(id) != null;
     }
 
-    private boolean userExists(String id) {
+    public boolean userExists(String id) {
         return getUserData(id) != null;
+    }
+
+    public void cleanDisconnectAllClients() {
+        if (isListening()) {
+            for (Thread thread : getClientConnections()) {
+                ConnectionToClient client = (ConnectionToClient) thread;
+
+                try {
+                    cleanDisconnectClient(client);
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+            }
+        }
     }
 
     //--------------- Handlers -----------------------------------------------------------------------------------------
@@ -172,6 +193,8 @@ public class ChatServer extends AbstractServer {
                 user.send(msg);
             }
         }
+
+        if (hasInterface()) ui.messageReceived(msg);
     }
 
     private void handlePrivateMessageFromClient(UserData source, PrivateMessage msg) {
@@ -182,6 +205,8 @@ public class ChatServer extends AbstractServer {
             source.send(new PrivateMessageFailEvent("Target user is blocking you"));
         } else if (destination.isLoggedIn()) {
             destination.send(msg);
+
+            if (hasInterface()) ui.messageReceived(msg);
         } else {
             source.send(new PrivateMessageFailEvent("Target user is offline"));
         }
@@ -207,14 +232,14 @@ public class ChatServer extends AbstractServer {
                 handleEventDisconnect(client);
             }
         }
+
+        if (hasInterface()) ui.eventReceived(event);
     }
 
     //-------------- Event handling ------------------------------------------------------------------------------------
 
     private void handleEventDisconnect(ConnectionToClient client) {
         try {
-            System.out.println(client + " initiated clean disconnect");
-
             client.close();
             clientDisconnected(client);
         } catch (IOException ex) {
@@ -229,24 +254,18 @@ public class ChatServer extends AbstractServer {
         if (user == null) {
             try {
                 client.sendToClient(new LoginEvent(login.getId(), null, LoginEvent.LOGIN_FAIL, "No such ID"));
-
-                System.out.println("Login attempt from client " + client + " failed with incorrect id: " + login.getId());
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
         } else if (user.isLoggedIn()) {
             try {
                 client.sendToClient(new LoginEvent(login.getId(), null, LoginEvent.LOGIN_FAIL, "User with that name is already logged in"));
-
-                System.out.println("Login attempt from client " + client + " failed with username already in use: " + login.getId());
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
         } else if (!user.getPassword().equals(login.getPassword())) {
             try {
                 client.sendToClient(new LoginEvent(login.getId(), null, LoginEvent.LOGIN_FAIL, "Incorrect password"));
-
-                System.out.println("Login attempt from client " + client + " failed with incorrect password for: " + login.getId());
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
@@ -255,8 +274,6 @@ public class ChatServer extends AbstractServer {
                 client.sendToClient(new LoginEvent(login.getId(), null, LoginEvent.LOGIN_SUCCEED));
                 sendToAllClients(new UserConnectedEvent(login.getId()));
                 user.setClient(client);
-
-                System.err.println("Client " + client + " logged in as: " + login.getId());
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
@@ -295,7 +312,7 @@ public class ChatServer extends AbstractServer {
 
     @Override
     protected void clientConnected(ConnectionToClient client) {
-        System.out.println("Client Connected: " + client);
+        if (hasInterface()) ui.clientConnected(client.getInetAddress().getHostAddress());
     }
 
     @Override
@@ -305,9 +322,9 @@ public class ChatServer extends AbstractServer {
             user.setClient(null);
             sendToAllClients(new UserDisconnectedEvent(user.getId()));
 
-            System.err.println("Client disconnected: " + user.getId());
+            if (hasInterface()) ui.clientDisconnected(user.getId());
         } else {
-            System.out.println("Client disconnected before logging in");
+            if (hasInterface()) ui.clientDisconnected();
         }
     }
 
