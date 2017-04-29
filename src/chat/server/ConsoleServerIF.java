@@ -95,6 +95,8 @@ public class ConsoleServerIF implements ServerInterface {
             handleSetPortCommand(remaining);
         } else if (command.equals("kick")) {
             handleKickCommand(remaining);
+        } else {
+            System.err.println("Unrecognized command: " + command);
         }
     }
 
@@ -192,13 +194,18 @@ public class ConsoleServerIF implements ServerInterface {
     }
 
     @Override
-    public void clientDisconnected() {
-        System.err.println("Client disconnected without logging in");
+    public void clientDisconnected(String ip) {
+        System.err.println("Client disconnected: " + ip);
     }
 
     @Override
-    public void clientDisconnected(String id) {
-        System.err.println("Client disconnected: " + id);
+    public void clientDisconnected(String ip, String id) {
+        System.err.println("User disconnected: " + id + " (" + ip + ")");
+    }
+
+    @Override
+    public void clientLoggedIn(String ip, String id) {
+        System.err.println("Client logged in as: " + id + " (" + ip + ")");
     }
 
 }

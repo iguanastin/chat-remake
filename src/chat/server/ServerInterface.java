@@ -15,8 +15,10 @@ public interface ServerInterface {
 
     void clientConnected(String ip);
 
-    void clientDisconnected();
+    void clientDisconnected(String ip);
 
-    void clientDisconnected(String id);
+    void clientDisconnected(String ip, String id);
+
+    void clientLoggedIn(String ip, String id);
 
 }

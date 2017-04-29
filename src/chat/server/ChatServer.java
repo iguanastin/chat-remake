@@ -274,6 +274,8 @@ public class ChatServer extends AbstractServer {
                 client.sendToClient(new LoginEvent(login.getId(), null, LoginEvent.LOGIN_SUCCEED));
                 sendToAllClients(new UserConnectedEvent(login.getId()));
                 user.setClient(client);
+
+                if (hasInterface()) ui.clientLoggedIn((String) client.getInfo("ip"), user.getId());
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
@@ -312,6 +314,8 @@ public class ChatServer extends AbstractServer {
 
     @Override
     protected void clientConnected(ConnectionToClient client) {
+        client.setInfo("ip", client.getInetAddress().getHostAddress());
+
         if (hasInterface()) ui.clientConnected(client.getInetAddress().getHostAddress());
     }
 
@@ -322,9 +326,9 @@ public class ChatServer extends AbstractServer {
             user.setClient(null);
             sendToAllClients(new UserDisconnectedEvent(user.getId()));
 
-            if (hasInterface()) ui.clientDisconnected(user.getId());
+            if (hasInterface()) ui.clientDisconnected((String) client.getInfo("ip"), user.getId());
         } else {
-            if (hasInterface()) ui.clientDisconnected();
+            if (hasInterface()) ui.clientDisconnected((String) client.getInfo("ip"));
         }
     }
 
